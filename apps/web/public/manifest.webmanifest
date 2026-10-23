@@ -1,0 +1,47 @@
+{
+  "name": "IT Institute LMS",
+  "short_name": "IT Institute",
+  "description": "Institute operations and student learning portal for admissions, attendance, fees and certificates.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f9fa",
+  "theme_color": "#0f766e",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sign in",
+      "url": "/login",
+      "description": "Sign in to the institute portal"
+    },
+    {
+      "name": "Verify certificate",
+      "url": "/verify-certificate",
+      "description": "Check a certificate's status"
+    }
+  ]
+}

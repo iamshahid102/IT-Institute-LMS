@@ -1,0 +1,700 @@
+// IT Institute LMS — PostgreSQL schema
+// Money is stored as integer minor units (paisa). Timestamps are UTC.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  FRONT_DESK
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DISABLED
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  GRADUATED
+  WITHDRAWN
+  ARCHIVED
+}
+
+enum CourseStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BatchStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  SUSPENDED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  OPEN
+  FINALIZED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AttendanceMethod {
+  MANUAL
+  QR
+}
+
+enum DurationUnit {
+  WEEKS
+  MONTHS
+}
+
+enum InvoiceItemType {
+  TUITION
+  ADMISSION
+  EXAM
+  MATERIAL
+  OTHER
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  JAZZCASH
+  EASYPAISA
+  CHEQUE
+  OTHER
+}
+
+enum PaymentStatus {
+  POSTED
+  PARTIALLY_REVERSED
+  REVERSED
+}
+
+enum ReversalStatus {
+  COMPLETED
+}
+
+enum AssessmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum ResultStatus {
+  PASS
+  FAIL
+  ABSENT
+}
+
+enum CertificateStatus {
+  ISSUED
+  REVOKED
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Audience {
+  EVERYONE
+  STUDENTS
+  STAFF
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  student     Student?
+  instructor  Instructor?
+  sessions    AuthSession[]
+  resetTokens PasswordResetToken[]
+  notifications Notification[]
+
+  auditLogs            AuditLog[]         @relation("AuditActor")
+  createdStudents      Student[]          @relation("StudentCreatedBy")
+  attendanceMarked     AttendanceRecord[] @relation("AttendanceMarkedBy")
+  attendanceCorrected  AttendanceRecord[] @relation("AttendanceCorrectedBy")
+  sessionsOpened       ClassSession[]     @relation("SessionOpenedBy")
+  sessionsFinalized    ClassSession[]     @relation("SessionFinalizedBy")
+  sessionsCancelled    ClassSession[]     @relation("SessionCancelledBy")
+  invoicesCreated      Invoice[]          @relation("InvoiceCreatedBy")
+  paymentsReceived     Payment[]          @relation("PaymentReceivedBy")
+  reversalsCreated     PaymentReversal[]  @relation("ReversalCreatedBy")
+  certificatesIssued   Certificate[]      @relation("CertificateIssuedBy")
+  certificatesRevoked  Certificate[]      @relation("CertificateRevokedBy")
+  announcements        Announcement[]     @relation("AnnouncementAuthor")
+  resultsRecorded      AssessmentResult[] @relation("ResultRecordedBy")
+
+  @@index([role, status])
+  @@map("users")
+}
+
+model Student {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String?       @unique @db.Uuid
+  studentNumber   String        @unique
+  fullName        String
+  guardianName    String?
+  phone           String
+  email           String?
+  address         String?
+  dateOfBirth     DateTime?     @db.Date
+  photoStorageKey String?
+  admissionDate   DateTime      @db.Date
+  status          StudentStatus @default(ACTIVE)
+  notes           String?
+  archivedAt      DateTime?
+  createdById     String?       @db.Uuid
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy  User?        @relation("StudentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  enrollments Enrollment[]
+  qrTokens    QrToken[]
+
+  @@index([status])
+  @@index([fullName])
+  @@index([phone])
+  @@map("students")
+}
+
+model Instructor {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @unique @db.Uuid
+  fullName       String
+  email          String?
+  phone          String?
+  specialization String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  batches Batch[]
+
+  @@map("instructors")
+}
+
+model Course {
+  id              String       @id @default(uuid()) @db.Uuid
+  code            String       @unique
+  title           String
+  description     String?
+  durationValue   Int
+  durationUnit    DurationUnit
+  defaultFeeMinor Int?
+  status          CourseStatus @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  batches     Batch[]
+  feePlans    FeePlan[]
+  assessments Assessment[]
+
+  @@index([status])
+  @@map("courses")
+}
+
+model Batch {
+  id           String      @id @default(uuid()) @db.Uuid
+  courseId     String      @db.Uuid
+  instructorId String?     @db.Uuid
+  code         String      @unique
+  name         String
+  startDate    DateTime    @db.Date
+  endDate      DateTime    @db.Date
+  capacity     Int
+  status       BatchStatus @default(PLANNED)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  course      Course          @relation(fields: [courseId], references: [id])
+  instructor  Instructor?     @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  schedules   BatchSchedule[]
+  enrollments Enrollment[]
+  sessions    ClassSession[]
+
+  @@index([courseId, status])
+  @@index([status])
+  @@map("batches")
+}
+
+model BatchSchedule {
+  id        String @id @default(uuid()) @db.Uuid
+  batchId   String @db.Uuid
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  room      String?
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, dayOfWeek, startTime])
+  @@map("batch_schedules")
+}
+
+model Enrollment {
+  id             String           @id @default(uuid()) @db.Uuid
+  studentId      String           @db.Uuid
+  batchId        String           @db.Uuid
+  joinedAt       DateTime         @db.Date
+  completedAt    DateTime?
+  status         EnrollmentStatus @default(ACTIVE)
+  agreedFeeMinor Int
+  currency       String           @default("PKR")
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  student           Student            @relation(fields: [studentId], references: [id])
+  batch             Batch              @relation(fields: [batchId], references: [id])
+  invoices          Invoice[]
+  attendanceRecords AttendanceRecord[]
+  results           AssessmentResult[]
+  certificates      Certificate[]
+
+  @@unique([studentId, batchId])
+  @@index([batchId, status])
+  @@index([studentId, status])
+  @@map("enrollments")
+}
+
+model ClassSession {
+  id            String        @id @default(uuid()) @db.Uuid
+  batchId       String        @db.Uuid
+  startsAt      DateTime
+  endsAt        DateTime
+  status        SessionStatus @default(SCHEDULED)
+  topic         String?
+  openedById    String?       @db.Uuid
+  openedAt      DateTime?
+  finalizedById String?       @db.Uuid
+  finalizedAt   DateTime?
+  cancelledById String?       @db.Uuid
+  cancelledAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  batch          Batch              @relation(fields: [batchId], references: [id])
+  openedBy       User?              @relation("SessionOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
+  finalizedBy    User?              @relation("SessionFinalizedBy", fields: [finalizedById], references: [id], onDelete: SetNull)
+  cancelledBy    User?              @relation("SessionCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  attendance     AttendanceRecord[]
+
+  @@index([batchId, startsAt])
+  @@index([status, startsAt])
+  @@map("class_sessions")
+}
+
+model AttendanceRecord {
+  id               String           @id @default(uuid()) @db.Uuid
+  sessionId        String           @db.Uuid
+  enrollmentId     String           @db.Uuid
+  status           AttendanceStatus
+  method           AttendanceMethod @default(MANUAL)
+  markedAt         DateTime         @default(now())
+  markedById       String           @db.Uuid
+  remarks          String?
+  correctionReason String?
+  correctedAt      DateTime?
+  correctedById    String?          @db.Uuid
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  session    ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  enrollment Enrollment   @relation(fields: [enrollmentId], references: [id])
+  markedBy   User         @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  correctedBy User?       @relation("AttendanceCorrectedBy", fields: [correctedById], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId, status])
+  @@map("attendance_records")
+}
+
+model FeePlan {
+  id               String   @id @default(uuid()) @db.Uuid
+  name             String
+  courseId         String?  @db.Uuid
+  currency         String   @default("PKR")
+  totalFeeMinor    Int
+  installmentCount Int      @default(1)
+  description      String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  course Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  items  FeePlanItem[]
+
+  @@map("fee_plans")
+}
+
+model FeePlanItem {
+  id           String @id @default(uuid()) @db.Uuid
+  feePlanId    String @db.Uuid
+  description  String
+  amountMinor  Int
+  sequence     Int    @default(1)
+
+  feePlan FeePlan @relation(fields: [feePlanId], references: [id], onDelete: Cascade)
+
+  @@map("fee_plan_items")
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  invoiceNumber  String        @unique
+  enrollmentId   String        @db.Uuid
+  issuedAt       DateTime      @db.Date
+  dueAt          DateTime      @db.Date
+  status         InvoiceStatus @default(ISSUED)
+  currency       String        @default("PKR")
+  subtotalMinor  Int
+  discountMinor  Int           @default(0)
+  totalMinor     Int
+  notes          String?
+  createdById    String        @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  enrollment  Enrollment  @relation(fields: [enrollmentId], references: [id])
+  createdBy   User        @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items       InvoiceItem[]
+  payments    Payment[]
+  allocations PaymentAllocation[]
+
+  @@index([enrollmentId, status])
+  @@index([dueAt, status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String          @id @default(uuid()) @db.Uuid
+  invoiceId       String          @db.Uuid
+  description     String
+  quantity        Int             @default(1)
+  unitAmountMinor Int
+  lineTotalMinor  Int
+  itemType        InvoiceItemType @default(TUITION)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id                  String        @id @default(uuid()) @db.Uuid
+  paymentNumber       String        @unique
+  invoiceId           String        @db.Uuid
+  amountMinor         Int
+  currency            String        @default("PKR")
+  method              PaymentMethod
+  status              PaymentStatus @default(POSTED)
+  reference           String?
+  receivedAt          DateTime      @default(now())
+  receivedById        String        @db.Uuid
+  notes               String?
+  reversedAmountMinor Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  invoice     Invoice             @relation(fields: [invoiceId], references: [id])
+  receivedBy  User                @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  allocations PaymentAllocation[]
+  reversals   PaymentReversal[]
+
+  @@unique([method, reference])
+  @@index([invoiceId])
+  @@index([receivedAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id                  String   @id @default(uuid()) @db.Uuid
+  paymentId           String   @db.Uuid
+  invoiceId           String   @db.Uuid
+  allocatedAmountMinor Int
+  createdAt           DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@unique([paymentId, invoiceId])
+  @@map("payment_allocations")
+}
+
+model PaymentReversal {
+  id          String         @id @default(uuid()) @db.Uuid
+  paymentId   String         @db.Uuid
+  amountMinor Int
+  reason      String
+  status      ReversalStatus @default(COMPLETED)
+  createdById String         @db.Uuid
+  createdAt   DateTime       @default(now())
+
+  payment   Payment @relation(fields: [paymentId], references: [id])
+  createdBy User    @relation("ReversalCreatedBy", fields: [createdById], references: [id])
+
+  @@index([paymentId])
+  @@map("payment_reversals")
+}
+
+model Assessment {
+  id             String           @id @default(uuid()) @db.Uuid
+  courseId       String           @db.Uuid
+  batchId        String?          @db.Uuid
+  title          String
+  maxMarks       Int
+  passMarks      Int
+  assessmentDate DateTime         @db.Date
+  status         AssessmentStatus @default(DRAFT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  course  Course             @relation(fields: [courseId], references: [id])
+  results AssessmentResult[]
+
+  @@index([courseId, status])
+  @@map("assessments")
+}
+
+model AssessmentResult {
+  id            String       @id @default(uuid()) @db.Uuid
+  assessmentId  String       @db.Uuid
+  enrollmentId  String       @db.Uuid
+  marksObtained Int
+  status        ResultStatus
+  remarks       String?
+  recordedById  String?      @db.Uuid
+  recordedAt    DateTime     @default(now())
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  recordedBy User?      @relation("ResultRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([assessmentId, enrollmentId])
+  @@index([enrollmentId])
+  @@map("assessment_results")
+}
+
+model Certificate {
+  id                String            @id @default(uuid()) @db.Uuid
+  certificateNumber String            @unique
+  verificationCode  String            @unique
+  enrollmentId      String            @db.Uuid
+  status            CertificateStatus @default(ISSUED)
+  issuedAt          DateTime          @default(now())
+  issuedById        String            @db.Uuid
+  revokedAt         DateTime?
+  revokedById       String?           @db.Uuid
+  revocationReason  String?
+  storageKey        String
+  templateVersion   String            @default("v1")
+  contentHash       String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  issuedBy   User       @relation("CertificateIssuedBy", fields: [issuedById], references: [id])
+  revokedBy  User?      @relation("CertificateRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([enrollmentId, status])
+  @@map("certificates")
+}
+
+model QrToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  studentId String    @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, expiresAt])
+  @@map("qr_tokens")
+}
+
+model Announcement {
+  id          String             @id @default(uuid()) @db.Uuid
+  title       String
+  body        String
+  audience    Audience           @default(STUDENTS)
+  batchId     String?            @db.Uuid
+  status      AnnouncementStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdById String             @db.Uuid
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  createdBy User @relation("AnnouncementAuthor", fields: [createdById], references: [id])
+
+  @@index([status, audience])
+  @@map("announcements")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  type      String
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actorRole  Role?
+  action     String
+  entityType String
+  entityId   String?
+  requestId  String?
+  ipHash     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model InstituteSetting {
+  id                                String   @id @default("default")
+  instituteName                     String
+  shortName                         String?
+  logoStorageKey                    String?
+  currency                          String   @default("PKR")
+  timeZone                          String   @default("Asia/Karachi")
+  addressLine                       String?
+  phone                             String?
+  email                             String?
+  lateCountsAsPresent               Boolean  @default(false)
+  excusedCountsInDenominator        Boolean  @default(false)
+  attendanceThresholdPercent        Int      @default(75)
+  certificateRequireFullPayment     Boolean  @default(true)
+  certificateRequireAttendance      Boolean  @default(true)
+  certificateRequireAssessmentsPassed Boolean @default(false)
+  certificatePublicShowName         Boolean  @default(true)
+  receiptPrefix                     String   @default("RCPT")
+  certificatePrefix                 String   @default("CERT")
+  signatoryName                     String?
+  signatoryTitle                    String?
+  certificateLegalText              String?
+  updatedAt                         DateTime @updatedAt
+
+  @@map("institute_settings")
+}
+
+model AuthSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  tokenHash  String    @unique
+  userId     String    @db.Uuid
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastSeenAt DateTime  @default(now())
+  ipHash     String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model IdempotencyRecord {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorId      String   @db.Uuid
+  operation    String
+  key          String
+  requestHash  String
+  statusCode   Int?
+  responseBody Json?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@unique([actorId, operation, key])
+  @@map("idempotency_records")
+}
+
+model Counter {
+  name      String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("counters")
+}
