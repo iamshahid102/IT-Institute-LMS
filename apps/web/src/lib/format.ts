@@ -4,6 +4,10 @@ export function money(minor: number | null | undefined, currency = 'PKR'): strin
   return formatMinor(minor ?? 0, currency);
 }
 
+export function fromMinorUnits(minor: number): string {
+  return (minor / 100).toFixed(2);
+}
+
 export function dateLabel(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const date = value instanceof Date ? value : new Date(value);

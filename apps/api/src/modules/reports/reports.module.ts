@@ -195,6 +195,32 @@ reportsRouter.get('/completions', requirePermission('report.read'), async (req, 
     orderBy: { completedAt: 'desc' },
   });
 
+  if (query.format === 'csv') {
+    sendCsv(
+      res,
+      `completions-${from.toISOString().slice(0, 10)}.csv`,
+      toCsv(
+        [
+          { key: 'studentNumber', label: 'Student number' },
+          { key: 'studentName', label: 'Student' },
+          { key: 'batchCode', label: 'Batch' },
+          { key: 'courseTitle', label: 'Course' },
+          { key: 'completedAt', label: 'Completed at' },
+          { key: 'certificateNumber', label: 'Certificate' },
+        ],
+        enrollments.map((enrollment) => ({
+          studentNumber: enrollment.student.studentNumber,
+          studentName: enrollment.student.fullName,
+          batchCode: enrollment.batch.code,
+          courseTitle: enrollment.batch.course.title,
+          completedAt: enrollment.completedAt?.toISOString().slice(0, 10) ?? '',
+          certificateNumber: enrollment.certificates[0]?.certificateNumber ?? '',
+        })),
+      ),
+    );
+    return;
+  }
+
   res.json({
     data: {
       from,
