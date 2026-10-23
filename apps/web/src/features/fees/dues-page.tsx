@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/api';
 import { dateLabel, money } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { MetricCard } from '@/components/ui/metric-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ErrorState, EmptyState } from '@/components/ui/empty-state';

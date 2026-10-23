@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ErrorState } from '@/components/ui/empty-state';
 import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { FormErrorSummary } from '@/components/ui/form-field';
 import { useAuth } from '@/features/auth/auth-context';

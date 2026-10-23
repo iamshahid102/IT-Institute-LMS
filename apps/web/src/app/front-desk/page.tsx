@@ -13,7 +13,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import { dateLabel, dateTimeLabel, money, timeLabel } from '@/lib/format';
+import { dateLabel, money, timeLabel } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { MetricCard } from '@/components/ui/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

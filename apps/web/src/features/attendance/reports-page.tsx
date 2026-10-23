@@ -59,6 +59,8 @@ export function AttendanceReports({ mode }: { mode: 'admin' | 'front-desk' }) {
       <PageHeader
         title="Attendance reports"
         description="Attendance percentages use only finalized sessions within each enrollment window."
+        backHref={mode === 'admin' ? '/admin/attendance' : '/front-desk/attendance'}
+        backLabel="Attendance"
         actions={
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="h-4 w-4" /> Print

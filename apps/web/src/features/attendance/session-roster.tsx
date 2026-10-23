@@ -266,7 +266,6 @@ export function SessionRoster({ sessionId, mode }: { sessionId: string; mode: 'a
 
       <CorrectionDialog
         entry={correcting}
-        sessionId={sessionId}
         onOpenChange={(open) => !open && setCorrecting(null)}
         onCorrected={invalidate}
       />
@@ -276,12 +275,10 @@ export function SessionRoster({ sessionId, mode }: { sessionId: string; mode: 'a
 
 function CorrectionDialog({
   entry,
-  sessionId,
   onOpenChange,
   onCorrected,
 }: {
   entry: RosterEntry | null;
-  sessionId: string;
   onOpenChange: (open: boolean) => void;
   onCorrected: () => void;
 }) {
