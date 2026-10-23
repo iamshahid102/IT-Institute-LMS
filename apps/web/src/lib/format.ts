@@ -74,3 +74,11 @@ export function localDateTimeInput(date = new Date()): string {
 export function toIsoFromLocalInput(value: string): string {
   return new Date(value).toISOString();
 }
+
+/**
+ * Session times are entered as institute wall-clock time. Asia/Karachi has a
+ * fixed UTC+05:00 offset, so the conversion is deterministic.
+ */
+export function instituteWallTimeToIso(date: string, time: string): string {
+  return new Date(`${date}T${time}:00+05:00`).toISOString();
+}

@@ -35,7 +35,7 @@ const schema = z.object({
   email: z.union([z.literal(''), z.email('Enter a valid email address.')]).optional(),
   phone: z.string().max(30).optional(),
   specialization: z.string().max(160).optional(),
-  active: z.boolean().default(true),
+  active: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;

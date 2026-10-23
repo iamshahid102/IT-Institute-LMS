@@ -28,11 +28,15 @@ const baseSchema = z.object({
   admissionDate: z.string().min(1, 'Select the admission date.'),
   address: z.string().trim().max(240).optional(),
   notes: z.string().trim().max(1000).optional(),
-  createAccount: z.boolean().default(false),
+  createAccount: z.boolean().optional(),
   portalPassword: z.string().optional(),
 });
 
-const createSchema = baseSchema.superRefine((values, ctx) => {
+const schema = baseSchema
+  .extend({
+    status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'WITHDRAWN']).optional(),
+  })
+  .superRefine((values, ctx) => {
   if (values.createAccount) {
     if (!values.email) {
       ctx.addIssue({ code: 'custom', path: ['email'], message: 'An email is required for a portal account.' });
@@ -54,11 +58,7 @@ const createSchema = baseSchema.superRefine((values, ctx) => {
   }
 });
 
-const editSchema = baseSchema.extend({
-  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'WITHDRAWN']),
-});
-
-type FormValues = z.infer<typeof editSchema>;
+type FormValues = z.infer<typeof schema>;
 
 interface StudentFormProps {
   mode: 'create' | 'edit';
@@ -81,8 +81,6 @@ export function StudentForm({ mode, basePath, studentId, initial }: StudentFormP
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = React.useState<string | null>(null);
-
-  const schema = mode === 'create' ? createSchema : editSchema;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -138,7 +136,7 @@ export function StudentForm({ mode, basePath, studentId, initial }: StudentFormP
             dateOfBirth: values.dateOfBirth || undefined,
             address: values.address || null,
             notes: values.notes || null,
-            status: values.status,
+            status: values.status ?? initial?.status ?? 'ACTIVE',
           }),
         });
         toast.success('Student record updated.');

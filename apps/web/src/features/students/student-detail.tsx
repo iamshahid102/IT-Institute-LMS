@@ -86,6 +86,8 @@ interface AttendanceRow {
   method: string;
   markedAt: string;
   remarks: string | null;
+  correctionReason: string | null;
+  correctedAt: string | null;
   session: { id: string; startsAt: string; status: string; topic: string | null; batch: { code: string; name: string } };
 }
 
