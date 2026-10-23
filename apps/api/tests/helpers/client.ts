@@ -65,6 +65,11 @@ export class ApiClient {
     return body === undefined ? call : call.send(body as object);
   }
 
+  put(path: string, body?: unknown): request.Test {
+    const call = this.agent.put(`${API}${path}`).set('X-CSRF-Token', this.csrfToken);
+    return body === undefined ? call : call.send(body as object);
+  }
+
   patch(path: string, body?: unknown): request.Test {
     const call = this.agent.patch(`${API}${path}`).set('X-CSRF-Token', this.csrfToken);
     return body === undefined ? call : call.send(body as object);

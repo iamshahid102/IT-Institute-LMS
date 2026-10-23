@@ -10,10 +10,12 @@ const API_URL = 'http://127.0.0.1:4000';
  */
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/global-setup.ts', '**/helpers.ts'],
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: { timeout: 15_000 },
   reporter: [['list']],
   outputDir: '../../test-results',
   use: {

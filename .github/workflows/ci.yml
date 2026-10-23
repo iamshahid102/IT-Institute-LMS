@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lms
+          POSTGRES_PASSWORD: lmsdev
+          POSTGRES_DB: lms_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lms"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://lms:lmsdev@127.0.0.1:5432/lms_test?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @lms/shared
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w @lms/api
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+        working-directory: apps/api
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck the test suite
+        run: npx tsc -p tsconfig.test.json
+        working-directory: apps/api
+
+      - name: API unit and integration tests
+        run: npm run test -w @lms/api
+        env:
+          NODE_ENV: test
+
+      - name: Production builds
+        run: npm run build
+
+  e2e:
+    name: Browser end-to-end tests
+    runs-on: ubuntu-latest
+    needs: verify
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lms
+          POSTGRES_PASSWORD: lmsdev
+          POSTGRES_DB: lms_dev
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lms"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://lms:lmsdev@127.0.0.1:5432/lms_dev?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Write API environment file
+        run: |
+          cat > apps/api/.env <<EOF
+          NODE_ENV=development
+          PORT=4000
+          DATABASE_URL="${DATABASE_URL}"
+          WEB_ORIGIN=http://localhost:3000
+          APP_PUBLIC_URL=http://localhost:3000
+          COOKIE_SECURE=false
+          LOG_LEVEL=warn
+          STORAGE_DRIVER=local
+          STORAGE_LOCAL_DIR=./var/storage
+          EOF
+
+      - name: Build shared package
+        run: npm run build -w @lms/shared
+
+      - name: Apply migrations and seed development data
+        run: |
+          npx prisma migrate deploy
+          npm run db:seed
+        working-directory: apps/api
+
+      - name: Build applications
+        run: npm run build
+
+      - name: Install Chrome for Playwright
+        run: npx playwright install --with-deps chrome
+
+      - name: Run Playwright journeys
+        run: npm run test:e2e -w @lms/web
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright artefacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7

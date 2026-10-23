@@ -15,6 +15,7 @@ apps/api/.pgdata/
 # Test and tooling output
 playwright-report/
 test-results/
+apps/web/e2e/.auth/
 *.log
 
 # OS / editor noise
