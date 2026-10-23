@@ -40,3 +40,13 @@ it-institute-lms/
 ```
 
 The `packages/shared` workspace is optional. Do not couple frontend runtime code to Prisma-generated types or server-only modules.
+
+## After the pack is approved
+
+Two documents describe the implementation that was built from this pack, so the approved requirements above can be
+traced to running code:
+
+- `10_IMPLEMENTATION_PLAN.md` — resolved architecture, requirements traceability to the shipped modules, the
+  approved business rules, environment prerequisites and the verification plan.
+- `11_VERIFICATION_REPORT.md` — the checks that were actually executed (API suite, browser journeys, lint, type
+  checks, builds, migrations) with exact results, plus what still needs manual QA.

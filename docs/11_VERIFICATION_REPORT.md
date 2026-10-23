@@ -15,7 +15,7 @@ Everything below was executed in this working copy. No result is copied from a p
 
 ## 2. Automated API suite — `npm test -w @lms/api`
 
-**Result: 68 tests passed, 8 files, exit code 0.** The suite runs against a real PostgreSQL `*_test` database,
+**Result: 77 tests passed, 9 files, exit code 0.** The suite runs against a real PostgreSQL `*_test` database,
 which `tests/global-setup.ts` migrates and refuses to run against any database not ending in `_test`.
 
 | File | Tests | Covers |
@@ -28,6 +28,7 @@ which `tests/global-setup.ts` migrates and refuses to run against any database n
 | `tests/integration/attendance.test.ts` | 11 | Session create/open/finalize (auto-absent), invalid time range, manual marking + duplicate rejection (DB unique constraint), unknown student, closed session, QR issue/scan/replay, wrong-batch token, invalid token, expired token, correction permission + reason + audit row, percentage excluding cancelled sessions |
 | `tests/integration/fees.test.ts` | 11 | Integer invoice maths, discount guard, partial payment status/balance, ledger reconciliation, idempotent replay, key reuse with different payload, missing idempotency key, overpayment, duplicate reference, full settlement, partial + full reversal with ledger effect, reversal beyond remaining, staff and student receipt PDFs, fee plans |
 | `tests/integration/certificates.test.ts` | 8 | Eligibility diagnostics for incomplete enrollment, fee-blocked eligibility, one-time issuance with unique number/code, front-desk denial, public verification field minimisation, unknown code 404, owner download and cross-student denial, revocation status + download block + double-revocation guard |
+| `tests/integration/operations.test.ts` | 9 | Settings write permitted for administrators and denied for front desk with the change visible to staff, timezone validation, announcement visibility split between published/draft/staff-only and student portal, assessment creation, result recording with PASS/FAIL derivation and marks validation, CSV report export, dashboard metric reconciliation against seeded data |
 
 Additional checks: `npx tsc -p tsconfig.test.json` (sources + tests) exits 0; `eslint .` in `apps/api` reports no
 errors.
