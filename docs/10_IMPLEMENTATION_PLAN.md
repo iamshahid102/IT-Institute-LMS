@@ -52,20 +52,20 @@ it-institute-lms/
 
 | Requirement | Implementation | Verification |
 |---|---|---|
-| FR-AUTH-01..07 | `apps/api/src/modules/auth`, `users`; `middleware/auth.ts`, `middleware/csrf.ts` | `tests/auth.test.ts`, `tests/rbac.test.ts` |
-| FR-STU-01..06 | `modules/students`, `courses`, `batches`, `instructors`, `enrollments` | `tests/students.test.ts`, `tests/enrollments.test.ts` |
-| FR-ATT-01..08 | `modules/attendance`, `modules/qr`; shared `attendance.ts` | `tests/attendance.test.ts`, unit tests `attendance-policy.test.ts` |
-| FR-FEE-01..09 | `modules/fees` (plans, invoices, payments, reversals), `modules/receipts` | `tests/fees.test.ts`, `tests/idempotency.test.ts`, `money.test.ts` |
-| FR-CERT-01..07 | `modules/certificates`, `modules/verification`, `storage` | `tests/certificates.test.ts` |
-| FR-COM-01..04 | `modules/announcements`, `modules/notifications` | `tests/announcements.test.ts` |
-| FR-REP-01..02 | `modules/reports` + CSV serializers | `tests/reports.test.ts` |
-| FR-SET-01 | `modules/settings` | `tests/settings.test.ts` |
-| FR-AUD-01 | `modules/audit` + `utils/audit.ts` | asserted inside the module tests |
-| NFR-SEC-01..07 | helmet, CORS allowlist, rate limits, Argon2id, cookie flags, CSRF, Zod validation, private storage | `tests/security.test.ts`, `tests/rbac.test.ts` |
-| NFR-DATA-01..03 | Prisma transactions, `Int` minor units, UTC storage | `tests/fees.test.ts`, `tests/attendance.test.ts` |
-| NFR-PWA-01 | Custom service worker with app-shell-only caching | manual + documented cache policy audit |
-| NFR-TEST-01 | Vitest + Supertest suites, Playwright specs | see §5 |
-| Module 12 (PWA) | `apps/web/src/app/manifest.webmanifest`, `public/sw.js`, install/update/offline components | Playwright + manual checklist |
+| FR-AUTH-01..07 | `apps/api/src/modules/auth`, `users`; `middleware/auth.ts`, `middleware/csrf.ts` | `tests/integration/auth.test.ts` (11), `tests/integration/rbac.test.ts` |
+| FR-STU-01..06 | `modules/students`, `courses`, `batches`, `instructors`, `enrollments` | `tests/integration/admissions.test.ts` (8) |
+| FR-ATT-01..08 | `modules/attendance`; shared `attendance.ts` policy | `tests/integration/attendance.test.ts` (11), unit `tests/unit/attendance.test.ts` (7) |
+| FR-FEE-01..09 | `modules/fees` (plans, invoices, payments, reversals, receipts) | `tests/integration/fees.test.ts` (11), unit `tests/unit/money.test.ts` (6) |
+| FR-CERT-01..07 | `modules/certificates`, `services/storage.ts` | `tests/integration/certificates.test.ts` (8) |
+| FR-COM-01..04 | `modules/announcements`, `modules/notifications` (portal feed) | `tests/integration/operations.test.ts` (announcements 2) |
+| FR-REP-01..02 | `modules/reports` + CSV serializers | `tests/integration/operations.test.ts` (reports 2) |
+| FR-SET-01 | `modules/settings` | `tests/integration/operations.test.ts` (settings 3) |
+| FR-AUD-01 | `modules/audit` + `utils/audit.ts` | asserted inside attendance, assessment and reversal tests |
+| NFR-SEC-01..07 | helmet, CORS allowlist, rate limits, Argon2id, cookie flags, CSRF, Zod validation, private storage | `tests/integration/auth.test.ts`, `tests/integration/rbac.test.ts` |
+| NFR-DATA-01..03 | Prisma transactions, `Int` minor units, UTC storage | `tests/integration/fees.test.ts`, `tests/unit/money.test.ts` |
+| NFR-PWA-01 | Custom service worker with app-shell-only caching | `apps/web/e2e/pwa.spec.ts` + documented cache policy audit |
+| NFR-TEST-01 | Vitest + Supertest suites, Playwright specs | `npm test -w @lms/api` (77), `npm run test:e2e -w @lms/web` (19) |
+| Module 12 (PWA) | `apps/web/public/manifest.webmanifest`, `public/sw.js`, install/update/offline components | `apps/web/e2e/pwa.spec.ts` (4), manual checklist |
 
 ## 4. Approved business rules implemented
 
@@ -75,12 +75,22 @@ it-institute-lms/
 4. **Certificate eligibility**: enrollment `COMPLETED`, attendance ≥ configured threshold, no outstanding balance, and (when enabled) all published assessments passed. Revoked certificates keep their audit trail; reissue creates a new certificate.
 5. **Archival**: students, courses, batches and enrollments are status-archived. No hard delete exists for records with financial or academic history.
 
-## 5. Verification plan
+## 5. Verification plan and results
 
-- `npm run lint`, `npm run typecheck`, `npm run build` at the workspace root.
-- API unit + integration tests: `npm run test -w apps/api` against a migrated PostgreSQL test database.
-- Playwright end-to-end journeys per `09_TEST_PLAN.md` §2 (run locally against the built apps).
-- Manual: mobile widths, camera permission/fallback, PWA install, offline banner, PDF downloads, backup/restore rehearsal.
+Executed on 2026-10-23 on this Windows machine (Node 24.21, npm 12, PostgreSQL 18.4 via the bundled development
+launcher, Chrome through Playwright 1.64). Exact figures, what each suite covers, and what remains manual are in
+`11_verification.md`.
+
+- `npm run lint` — clean for `@lms/api` (0 errors/warnings) and `@lms/web` (160 files, 0 errors/warnings).
+- `npm run typecheck` — clean for every workspace; `tsc -p tsconfig.test.json` also clean.
+- `npm test -w @lms/api` — **77 tests, 9 files, all passing** against a migrated `lms_test` database.
+- `npm run test:e2e -w @lms/web` — **19 Playwright journeys passing** against the production builds of both apps.
+- `npm run build` — shared, API and web production builds all succeed.
+- `prisma migrate deploy` from an empty database applies `20261023072413_init` cleanly.
+- Manual: mobile widths, camera permission/fallback, PWA install, offline banner, PDF downloads, backup/restore
+  rehearsal.
+- CI: `.github/workflows/ci.yml` runs lint, typecheck, the API suite against a PostgreSQL service, production
+  builds, and then the Playwright suite against seeded data.
 
 ## 6. Environment prerequisites
 

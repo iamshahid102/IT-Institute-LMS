@@ -37,16 +37,19 @@ configuration. Production also requires `COOKIE_SECURE=true` and an HTTPS `WEB_O
 - `tests/unit` — money helpers and attendance policy maths (pure functions).
 - `tests/integration` — authentication/session behaviour, CSRF, RBAC, student record ownership (IDOR),
   attendance (sessions, manual marking, QR flow, duplicates, corrections, reporting), fees (invoice maths,
-  partial payments, idempotency, reversals, receipts) and certificates (eligibility, issuance, public
-  verification, revocation, downloads).
+  partial payments, idempotency, reversals, receipts), certificates (eligibility, issuance, public
+  verification, revocation, downloads), admissions/enrollments (student numbers, archival, duplicate
+  protection, completion) and operations (settings, announcements, assessments, CSV reports, dashboards).
 - `tests/global-setup.ts` applies `prisma migrate deploy` to the configured test database and refuses any
   database name that does not end in `_test`. `tests/helpers/db.ts` truncates tables between tests.
 - Rate limits are disabled while `NODE_ENV=test` so the suite can exercise login repeatedly.
 
 ```bash
-npm test                       # 68 tests, 8 files
+npm test                       # 77 tests, 9 files
 npm test -- tests/unit         # unit tests only
 ```
+
+Playwright journeys for the built apps live in `apps/web/e2e` and are run with `npm run test:e2e`.
 
 The test database must exist (the bundled launcher creates `lms_test` alongside `lms_dev`).
 

@@ -72,7 +72,7 @@ Run on 23 October 2026 on the development machine described in `docs/11_VERIFICA
 
 | Check | Result |
 |---|---|
-| API unit + integration tests | **68 passed** (8 files) |
+| API unit + integration tests | **77 passed** (9 files) |
 | API test-suite typecheck (`tsconfig.test.json`) | clean |
 | Playwright journeys (desktop Chrome, real API + web builds) | **19 passed** |
 | `npm run lint` (web + api) | clean |
