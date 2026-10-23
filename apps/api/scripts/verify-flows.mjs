@@ -49,11 +49,9 @@ console.log('students:', students.status, students.body.meta?.total, students.bo
 
 const courses = await call('GET', '/courses');
 console.log('courses:', courses.status, courses.body.data?.length);
-const courseId = courses.body.data?.[0]?.id;
 
 const batches = await call('GET', '/batches');
 console.log('batches:', batches.status, batches.body.data?.length, batches.body.data?.[0]?.enrolledCount);
-const batchId = batches.body.data?.[0]?.id;
 
 const sessions = await call('GET', '/attendance/sessions?pageSize=5');
 console.log('sessions:', sessions.status, sessions.body.meta?.total);
